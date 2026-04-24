@@ -264,6 +264,36 @@ func parseQueryLine(line string) (query, bool, error) {
 	return q, true, nil
 }
 
+// ApplySearchRegion appends " in <region>" to each keyword when region is non-empty,
+// unless the keyword already contains the region (case-insensitive). Used by the web UI
+// so users can type "cosmetic clinic" and set region to "California" without editing every line.
+func ApplySearchRegion(keywords []string, region string) []string {
+	region = strings.TrimSpace(region)
+	if region == "" {
+		return keywords
+	}
+
+	lowerR := strings.ToLower(region)
+	out := make([]string, 0, len(keywords))
+
+	for _, k := range keywords {
+		k = strings.TrimSpace(k)
+		if k == "" {
+			continue
+		}
+
+		if strings.Contains(strings.ToLower(k), lowerR) {
+			out = append(out, k)
+
+			continue
+		}
+
+		out = append(out, k+" in "+region)
+	}
+
+	return out
+}
+
 func LoadCustomWriter(pluginDir, pluginName string) (scrapemate.ResultWriter, error) {
 	files, err := os.ReadDir(pluginDir)
 	if err != nil {

@@ -121,22 +121,26 @@ func (j *PlaceJob) Process(_ context.Context, resp *scrapemate.Response) (any, [
 		entry.UserReviewsExtended = append(entry.UserReviewsExtended, convertedReviews...)
 	}
 
-	if j.ExtractEmail && entry.IsWebsiteValidForEmail() {
-		opts := []EmailExtractJobOptions{}
-		if j.ExitMonitor != nil {
-			opts = append(opts, WithEmailJobExitMonitor(j.ExitMonitor))
+	if j.ExtractEmail {
+		if entry.IsWebsiteValidForEmail() {
+			opts := []EmailExtractJobOptions{}
+			if j.ExitMonitor != nil {
+				opts = append(opts, WithEmailJobExitMonitor(j.ExitMonitor))
+			}
+
+			if j.WriterManagedCompletion {
+				opts = append(opts, WithEmailJobWriterManagedCompletion())
+			}
+
+			emailJob := NewEmailJob(j.ID, &entry, opts...)
+
+			j.UsageInResultststs = false
+
+			return nil, []scrapemate.IJob{emailJob}, nil
 		}
+	}
 
-		if j.WriterManagedCompletion {
-			opts = append(opts, WithEmailJobWriterManagedCompletion())
-		}
-
-		emailJob := NewEmailJob(j.ID, &entry, opts...)
-
-		j.UsageInResultststs = false
-
-		return nil, []scrapemate.IJob{emailJob}, nil
-	} else if j.ExitMonitor != nil && !j.WriterManagedCompletion {
+	if j.ExitMonitor != nil && !j.WriterManagedCompletion {
 		j.ExitMonitor.IncrPlacesCompleted(1)
 	}
 

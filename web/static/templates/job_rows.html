@@ -1,20 +1,27 @@
 {{range .}}
 <tr>
-    <td>{{.ID}}</td>
+    <td><code style="font-size:11px;color:var(--text-muted)">{{.ID}}</code></td>
     <td>{{.Name}}</td>
-    <td>{{.Date}}</td>
+    <td style="color:var(--text-secondary)">{{.Date}}</td>
     <td>
         <span class="status-indicator status-{{.Status}}">{{.Status}}</span>
     </td>
-    <td>
+    <td class="job-actions-cell">
+        <div class="job-row-actions">
+        {{ if or (eq .Status "working") (eq .Status "pending") }}
+            <button type="button" class="live-btn" onclick="openLiveResults('{{.ID}}')">Live</button>
+        {{ end }}
+        <button type="button" class="secondary-button" onclick="showJobDetail('{{.ID}}')">Details</button>
+        <button type="button" class="secondary-button" onclick="duplicateJobIntoForm('{{.ID}}')">Duplicate</button>
         {{ if eq .Status "ok" }}
-            <a href="/download?id={{.ID}}" download class="button download-button">Download</a>
+            <a href="/download?id={{.ID}}" download class="download-button">Download CSV</a>
         {{ end }}
         <button hx-delete="/delete?id={{.ID}}" 
                 hx-target="closest tr"
                 hx-swap="outerHTML"
                 hx-confirm="Are you sure you want to delete this job?"
                 class="delete-button">Delete</button>
+        </div>
     </td>
 </tr>
 {{end}}

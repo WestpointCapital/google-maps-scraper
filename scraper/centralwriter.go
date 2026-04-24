@@ -226,6 +226,10 @@ func (cw *CentralWriter) markCompletedFromResult(result scrapemate.Result, count
 		if job.WriterManagedCompletion && job.ExitMonitor != nil {
 			job.ExitMonitor.IncrPlacesCompleted(count)
 		}
+	case *gmaps.EmailSubpageJob:
+		if job.WriterManagedCompletion && job.ExitMonitor != nil {
+			job.ExitMonitor.IncrPlacesCompleted(count)
+		}
 	case *gmaps.SearchJob:
 		if job.WriterManagedCompletion && job.ExitMonitor != nil {
 			job.ExitMonitor.IncrPlacesCompleted(count)

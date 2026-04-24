@@ -134,6 +134,12 @@ func (p *provider) Push(ctx context.Context, job scrapemate.IJob) error {
 		if err := enc.Encode(j); err != nil {
 			return err
 		}
+	case *gmaps.EmailSubpageJob:
+		payloadType = "email_subpage"
+
+		if err := enc.Encode(j); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("invalid job type %T", job)
 	}
@@ -271,6 +277,13 @@ func decodeJob(payloadType string, payload []byte) (scrapemate.IJob, error) {
 		j := new(gmaps.EmailExtractJob)
 		if err := dec.Decode(j); err != nil {
 			return nil, fmt.Errorf("failed to decode email job: %w", err)
+		}
+
+		return j, nil
+	case "email_subpage":
+		j := new(gmaps.EmailSubpageJob)
+		if err := dec.Decode(j); err != nil {
+			return nil, fmt.Errorf("failed to decode email subpage job: %w", err)
 		}
 
 		return j, nil

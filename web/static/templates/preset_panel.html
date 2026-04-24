@@ -1,0 +1,19 @@
+{{if .}}
+<ul class="preset-list">
+{{range .}}
+    <li class="preset-item">
+        <span class="preset-name">{{.Name}}</span>
+        <span class="preset-actions">
+            <button type="button" class="secondary-button preset-load" onclick="applyPresetIntoForm('{{.ID}}')">Load</button>
+            <button type="button" class="delete-button"
+                    hx-delete="/ui/preset-delete?id={{.ID}}"
+                    hx-confirm="Delete this template?"
+                    hx-target="#preset-panel"
+                    hx-swap="innerHTML">Delete</button>
+        </span>
+    </li>
+{{end}}
+</ul>
+{{else}}
+<p class="text-muted"><small>No saved templates yet. Fill the form and click &ldquo;Save as template&rdquo;.</small></p>
+{{end}}

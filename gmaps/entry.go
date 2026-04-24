@@ -131,8 +131,14 @@ func (e *Entry) IsWebsiteValidForEmail() bool {
 
 	needles := []string{
 		"facebook",
-		"instragram",
+		"instagram",
 		"twitter",
+		"linkedin",
+		"tiktok",
+		"youtube.com",
+		"youtu.be",
+		"x.com",
+		"pinterest",
 	}
 
 	for i := range needles {
@@ -157,7 +163,7 @@ func (e *Entry) Validate() error {
 }
 
 func (e *Entry) CsvHeaders() []string {
-	return []string{
+	h := []string{
 		"input_id",
 		"link",
 		"title",
@@ -191,12 +197,16 @@ func (e *Entry) CsvHeaders() []string {
 		"about",
 		"user_reviews",
 		"user_reviews_extended",
-		"emails",
 	}
+	for i := 1; i <= CsvEmailColumnCount; i++ {
+		h = append(h, fmt.Sprintf("email_%d", i))
+	}
+
+	return h
 }
 
 func (e *Entry) CsvRow() []string {
-	return []string{
+	row := []string{
 		e.ID,
 		e.Link,
 		e.Title,
@@ -230,8 +240,11 @@ func (e *Entry) CsvRow() []string {
 		stringify(e.About),
 		stringify(e.UserReviews),
 		stringify(e.UserReviewsExtended),
-		stringSliceToString(e.Emails),
 	}
+
+	row = append(row, emailsCsvSlots(e.Emails)...)
+
+	return row
 }
 
 func (e *Entry) AddExtraReviews(pages [][]byte) {

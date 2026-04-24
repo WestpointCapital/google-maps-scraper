@@ -1,0 +1,23 @@
+<div class="job-detail-sheet">
+    <h3 class="job-detail-title">{{.Job.Name}}</h3>
+    <dl class="job-detail-dl">
+        <dt>Job ID</dt><dd><code>{{.Job.ID}}</code></dd>
+        <dt>Status</dt><dd><span class="status-indicator status-{{.Job.Status}}">{{.Job.Status}}</span></dd>
+        <dt>Created</dt><dd>{{.Job.Date.Format "2006-01-02 15:04:05 UTC"}}</dd>
+        <dt>Max time</dt><dd>{{.Job.Data.MaxTime}}</dd>
+        <dt>Language</dt><dd>{{.Job.Data.Lang}}</dd>
+        <dt>Zoom</dt><dd>{{.Job.Data.Zoom}}</dd>
+        <dt>Depth</dt><dd>{{.Job.Data.Depth}}</dd>
+        <dt>Fast mode</dt><dd>{{if .Job.Data.FastMode}}yes{{else}}no{{end}}</dd>
+        <dt>Radius (m)</dt><dd>{{.Job.Data.Radius}}</dd>
+        <dt>Fetch emails</dt><dd>{{if .Job.Data.Email}}yes{{else}}no{{end}}</dd>
+        <dt>Search region</dt><dd>{{if .Job.Data.SearchRegion}}{{.Job.Data.SearchRegion}}{{else}}—{{end}}</dd>
+        <dt>State grid</dt><dd>{{if .Job.Data.AreaPreset}}{{.Job.Data.AreaPreset}}{{else}}—{{end}}</dd>
+        <dt>Grid cell (km)</dt><dd>{{printf "%.0f" .Job.Data.GridCellKm}}</dd>
+        <dt>Map center</dt><dd>{{if or .Job.Data.Lat .Job.Data.Lon}}{{.Job.Data.Lat}}, {{.Job.Data.Lon}}{{else}}—{{end}}</dd>
+        <dt>Keywords</dt><dd><pre class="job-detail-pre">{{.KeywordsDisplay}}</pre></dd>
+        <dt>Proxies</dt><dd>{{if .ProxiesDisplay}}<pre class="job-detail-pre">{{.ProxiesDisplay}}</pre>{{else}}—{{end}}</dd>
+        <dt>Stored results</dt><dd>{{.ResultCount}} rows <a class="detail-export-link" href="{{.ExportResultsURL}}" target="_blank" rel="noopener">Download JSON snapshot</a></dd>
+        {{if .Job.Data.SimpleMode}}<dt>Quick search intensity</dt><dd>{{.Job.Data.Intensity}} / 100</dd>{{end}}
+    </dl>
+</div>

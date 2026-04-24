@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google Maps Scraper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.6/htmx.min.js"></script>
 </head>
@@ -12,148 +15,600 @@
         <header>
             <h1>Google Maps Scraper</h1>
             <nav>
-                <a href="/api/docs" target="_blank" rel="noopener noreferrer">API Documentation</a>
+                <a href="/api/docs" target="_blank" rel="noopener noreferrer">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    API Docs
+                </a>
             </nav>
             <div class="github-section">
-                <p>If you find this tool useful, please consider starring our repository: </p>
-                <a href="https://github.com/gosom/google-maps-scraper" class="github-button">
-                <svg height="16" width="16" viewBox="0 0 16 16">
-                    <path fill="currentColor" d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"/>
-                  </svg>
-                  Star on GitHub
+                <p>Find this useful?</p>
+                <a href="https://github.com/gosom/google-maps-scraper" class="github-button" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 16 16"><path fill="currentColor" d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"/></svg>
+                    Star on GitHub
                 </a>
             </div>
-            <div id="sponsor-section" class="sponsor-section">
-    <button class="sponsor-close" onclick="hideSponsor()">
-        ×
-    </button>
-    <p class="sponsor-text">Support the ongoing maintenance and development of this project by becoming a sponsor. Your contribution helps ensure the tool's continued improvement and reliability.</p>
-    <a href="https://github.com/sponsors/gosom" class="sponsor-button" target="_blank" rel="noopener noreferrer">
-        <svg height="16" width="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M4.25 2.5C4.25 1.83696 4.67143 1.25 5.25 1.25C5.82857 1.25 6.25 1.83696 6.25 2.5C6.25 3.16304 5.82857 3.75 5.25 3.75C4.67143 3.75 4.25 3.16304 4.25 2.5ZM2.5 3.75C1.92143 3.75 1.5 3.16304 1.5 2.5C1.5 1.83696 1.92143 1.25 2.5 1.25C3.07857 1.25 3.5 1.83696 3.5 2.5C3.5 3.16304 3.07857 3.75 2.5 3.75ZM8 1.25C7.42143 1.25 7 1.83696 7 2.5C7 3.16304 7.42143 3.75 8 3.75C8.57857 3.75 9 3.16304 9 2.5C9 1.83696 8.57857 1.25 8 1.25ZM10.75 2.5C10.75 1.83696 11.1714 1.25 11.75 1.25C12.3286 1.25 12.75 1.83696 12.75 2.5C12.75 3.16304 12.3286 3.75 11.75 3.75C11.1714 3.75 10.75 3.16304 10.75 2.5ZM14.5 1.25C13.9214 1.25 13.5 1.83696 13.5 2.5C13.5 3.16304 13.9214 3.75 14.5 3.75C15.0786 3.75 15.5 3.16304 15.5 2.5C15.5 1.83696 15.0786 1.25 14.5 1.25ZM1.25 5.25C1.25 4.67143 1.83696 4.25 2.5 4.25C3.16304 4.25 3.75 4.67143 3.75 5.25C3.75 5.82857 3.16304 6.25 2.5 6.25C1.83696 6.25 1.25 5.82857 1.25 5.25ZM5.25 4.25C4.67143 4.25 4.25 4.67143 4.25 5.25C4.25 5.82857 4.67143 6.25 5.25 6.25C5.82857 6.25 6.25 5.82857 6.25 5.25C6.25 4.67143 5.82857 4.25 5.25 4.25ZM7 5.25C7 4.67143 7.42143 4.25 8 4.25C8.57857 4.25 9 4.67143 9 5.25C9 5.82857 8.57857 6.25 8 6.25C7.42143 6.25 7 5.82857 7 5.25ZM11.75 4.25C11.1714 4.25 10.75 4.67143 10.75 5.25C10.75 5.82857 11.1714 6.25 11.75 6.25C12.3286 6.25 12.75 5.82857 12.75 5.25C12.75 4.67143 12.3286 4.25 11.75 4.25ZM13.5 5.25C13.5 4.67143 13.9214 4.25 14.5 4.25C15.0786 4.25 15.5 4.67143 15.5 5.25C15.5 5.82857 15.0786 6.25 14.5 6.25C13.9214 6.25 13.5 5.82857 13.5 5.25ZM2.5 7.25C1.83696 7.25 1.25 7.67143 1.25 8.25C1.25 8.82857 1.83696 9.25 2.5 9.25C3.16304 9.25 3.75 8.82857 3.75 8.25C3.75 7.67143 3.16304 7.25 2.5 7.25ZM4.25 8.25C4.25 7.67143 4.67143 7.25 5.25 7.25C5.82857 7.25 6.25 7.67143 6.25 8.25C6.25 8.82857 5.82857 9.25 5.25 9.25C4.67143 9.25 4.25 8.82857 4.25 8.25ZM8 7.25C7.42143 7.25 7 7.67143 7 8.25C7 8.82857 7.42143 9.25 8 9.25C8.57857 9.25 9 8.82857 9 8.25C9 7.67143 8.57857 7.25 8 7.25ZM10.75 8.25C10.75 7.67143 11.1714 7.25 11.75 7.25C12.3286 7.25 12.75 7.67143 12.75 8.25C12.75 8.82857 12.3286 9.25 11.75 9.25C11.1714 9.25 10.75 8.82857 10.75 8.25ZM14.5 7.25C13.9214 7.25 13.5 7.67143 13.5 8.25C13.5 8.82857 13.9214 9.25 14.5 9.25C15.0786 9.25 15.5 8.82857 15.5 8.25C15.5 7.67143 15.0786 7.25 14.5 7.25Z" fill="currentColor"/>
-        </svg>
-        Sponsor on GitHub
-    </a>
-</div>
-
         </header>
+
         <main>
             <div class="sidebar">
                 <div id="error-container" class="error-message"></div>
-                <form 
-                    hx-post="/scrape" 
-                    hx-target="#job-table tbody" 
-                    hx-swap="beforeend"
-                    hx-indicator="#spinner"
-                    hx-on::before-request="document.getElementById('error-container').innerHTML = ''"
-                    hx-on::after-request="if(!event.detail.successful) document.getElementById('error-container').innerHTML = event.detail.xhr.responseText"
-                >
-                    
-                    <fieldset>
-                        <legend>Job Details</legend>
-                        <div class="form-group">
-                            <label for="name">Job Name:</label>
-                            <input type="text" id="name" name="name" value="{{.Name}}">
-                        </div>
-                        <div class="form-group">
-                            <label for="keywords">Keywords:</label>
-                            <textarea id="keywords" name="keywords" rows="10">{{ .KeywordsString }}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="lang">Language:</label>
-                            <input type="text" id="lang" name="lang" value="{{.Language}}">
-                        </div>
-                    </fieldset>
-                    
-                    <details class="expandable-section">
-                        <summary>Location Settings</summary>
-                        <fieldset>
-                            <div class="form-group">
-                                <label for="zoom">Zoom:</label>
-                                <input type="number" id="zoom" name="zoom" value="{{.Zoom}}">
-                            </div>
-                            <div class="form-group">
-                                <label for="latitude">Latitude:</label>
-                                <input type="number" step="0.000000000000001" id="latitude" name="latitude" value="{{.Lat}}">
-                            </div>
-                            <div class="form-group">
-                                <label for="longitude">Longitude:</label>
-                                <input type="number" step="0.000000000000001" id="longitude" name="longitude" value="{{.Lon}}">
-                            </div>
-                        </fieldset>
-                    </details>
-                    
-                    <details class="expandable-section">
-                        <summary>Advanced Options</summary>
-                        <fieldset>
-                            <div class="form-group">
-                                <label for="fastmode">Fast Mode (BETA):</label>
-                                <input type="checkbox" id="fastmode" name="fastmode" {{if .FastMode}}checked{{end}}>
-                            </div>
-                            <div class="form-group">
-                                    <label for="radius">Radius (BETA):</label>
-                                    <input type="number" id="radius" name="radius" value="{{.Radius}}">
-                            </div>
-                            <div class="form-group">
-                                <label for="depth">Depth:</label>
-                                <input type="number" step="1" id="depth" name="depth" value="{{.Depth}}">
-                            </div>
-                            <div class="form-group checkbox">
-                                <input type="checkbox" id="email" name="email" {{if .Email}}checked{{end}}>
-                                <label for="email">Fetch Emails</label>
-                            </div>
-                            <div class="form-group">
-                                <label for="maxtime">Max job time:</label>
-                                <input type="text" id="maxtime" name="maxtime" value="{{.MaxTime}}">
-                            </div>
-                        </fieldset>
-                    </details>
-                    <details class="expandable-section">
-                        <summary>Proxies</summary>
-                        <fieldset>
-                            <div class="form-group">
-                                <label for="proxies">Proxies:(one per line)</label>
-                                <p class="text-muted"><small>Examples:<br>
-                                        <p>HTTPS proxy with username/password: https://username:password@myproxy.local:443<p>
-                                        <p>HTTP proxy with username/password: http://username:password@myproxy.local:443<p>
-                                        <p>SOCKS5 proxy without auth: socks5://127.0.0.1:8000</p>
-                                </p>
 
-                                <textarea id="proxies" name="proxies" rows="5">{{.ProxiesString}}</textarea>
+                <!-- Quick Search Card -->
+                <section class="card simple-run-card">
+                    <h2 class="sidebar-section-title">Quick Search</h2>
+                    <form id="simple-scrape-form"
+                        hx-post="/scrape"
+                        hx-target="#job-tbody"
+                        hx-swap="afterbegin"
+                        hx-indicator="#spinner"
+                        hx-on::before-request="document.getElementById('error-container').innerHTML = ''"
+                        hx-on::after-request="if(!event.detail.successful) document.getElementById('error-container').innerHTML = event.detail.xhr.responseText;"
+                    >
+                        <input type="hidden" name="simple_mode" value="1">
+                        <input type="hidden" name="lang" value="en">
+                        <input type="hidden" name="maxtime" id="simple_maxtime" value="">
+
+                        <div class="form-group">
+                            <label for="business_type">What are you looking for?</label>
+                            <input type="text" name="business_type" id="business_type" placeholder="cosmetic clinic, coffee shop, dentist..." autocomplete="off">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="location">Location</label>
+                            <input type="text" name="location" id="location" placeholder="California, New York City, 90210..." autocomplete="off">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="intensity">Search intensity: <strong id="intensity_label">55</strong></label>
+                            <input type="range" name="intensity" id="intensity" min="0" max="100" value="55" oninput="syncIntensityUI()">
+                            <p class="text-muted" id="intensity_hint"></p>
+                        </div>
+
+                        <div class="form-group checkbox">
+                            <input type="checkbox" name="email" id="simple_email" value="on">
+                            <label for="simple_email">Extract emails from websites</label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="simple_name">Job name <span style="color:var(--text-muted)">(optional)</span></label>
+                            <input type="text" name="name" id="simple_name" placeholder="Auto-generated from search" autocomplete="off">
+                        </div>
+
+                        <button type="submit" class="primary-submit">Start Search</button>
+                    </form>
+                </section>
+
+                <!-- Saved Templates -->
+                <section class="preset-sidebar-section">
+                    <h2 class="sidebar-section-title">Saved Templates</h2>
+                    <div id="preset-panel"
+                         hx-get="/ui/presets-panel"
+                         hx-trigger="load, presetListChanged from:body"
+                         hx-swap="innerHTML">
+                        <p class="text-muted">Loading...</p>
+                    </div>
+                    <div class="preset-save-row">
+                        <label for="preset_display_name" class="preset-save-label">Save current settings as template</label>
+                        <input type="text" id="preset_display_name" placeholder="Template name" maxlength="128" autocomplete="off">
+                        <button type="button" class="secondary-button preset-save-button" onclick="saveCurrentAsPreset()">Save Template</button>
+                    </div>
+                </section>
+
+                <!-- Advanced Form (collapsed) -->
+                <details class="expandable-section">
+                    <summary>Advanced Options</summary>
+                    <form id="scrape-form"
+                        hx-post="/scrape" 
+                        hx-target="#job-tbody" 
+                        hx-swap="afterbegin"
+                        hx-indicator="#spinner"
+                        hx-on::before-request="document.getElementById('error-container').innerHTML = ''"
+                        hx-on::after-request="if(!event.detail.successful) document.getElementById('error-container').innerHTML = event.detail.xhr.responseText"
+                    >
+                        <input type="hidden" name="simple_mode" value="0">
+                        <fieldset>
+                            <div class="form-group">
+                                <label for="name">Job Name</label>
+                                <input type="text" id="name" name="name" value="{{.Name}}">
+                            </div>
+                            <div class="form-group">
+                                <label for="keywords">Keywords (one per line)</label>
+                                <textarea id="keywords" name="keywords" rows="6">{{ .KeywordsString }}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="lang">Language</label>
+                                <input type="text" id="lang" name="lang" value="{{.Language}}" placeholder="en">
+                                <p class="text-muted">Two-letter code (e.g. en, de, es)</p>
                             </div>
                         </fieldset>
-                    </details>
-                    
-                    <button type="submit">Start Scraping</button>
-                </form>
+
+                        <details class="expandable-section nested-details">
+                            <summary>Location & Grid</summary>
+                            <fieldset>
+                                <div class="form-group">
+                                    <label for="search_region">Search Region</label>
+                                    <input type="text" id="search_region" name="search_region" value="{{.SearchRegion}}" placeholder="California, USA">
+                                </div>
+                                <div class="form-group">
+                                    <label for="area_preset">US State Grid</label>
+                                    <select id="area_preset" name="area_preset" class="full-width-select">
+                                        <option value="" {{if eq .AreaPreset ""}}selected{{end}}>None</option>
+                                        {{range .USStateAreas}}
+                                        <option value="{{.Code}}" {{if eq $.AreaPreset .Code}}selected{{end}}>{{.Label}}</option>
+                                        {{end}}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="grid_cell_km">Grid Cell Size (km)</label>
+                                    <input type="number" step="1" min="5" id="grid_cell_km" name="grid_cell_km" value="{{printf "%.0f" .GridCellKm}}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="zoom">Map Zoom (1-21)</label>
+                                    <input type="number" id="zoom" name="zoom" value="{{.Zoom}}" min="1" max="21">
+                                </div>
+                                <div class="form-group">
+                                    <label for="latitude">Latitude</label>
+                                    <input type="number" step="any" id="latitude" name="latitude" value="{{.Lat}}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="longitude">Longitude</label>
+                                    <input type="number" step="any" id="longitude" name="longitude" value="{{.Lon}}">
+                                </div>
+                            </fieldset>
+                        </details>
+
+                        <details class="expandable-section nested-details">
+                            <summary>Scraping Settings</summary>
+                            <fieldset>
+                                <div class="form-group checkbox">
+                                    <input type="checkbox" id="fastmode" name="fastmode" {{if .FastMode}}checked{{end}}>
+                                    <label for="fastmode">Fast Mode (radius-based)</label>
+                                </div>
+                                <div class="form-group">
+                                    <label for="radius">Radius (meters)</label>
+                                    <input type="number" id="radius" name="radius" value="{{.Radius}}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="depth">Scroll Depth</label>
+                                    <input type="number" step="1" id="depth" name="depth" value="{{.Depth}}">
+                                </div>
+                                <div class="form-group checkbox">
+                                    <input type="checkbox" id="email" name="email" {{if .Email}}checked{{end}}>
+                                    <label for="email">Fetch Emails</label>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxtime">Max Job Time</label>
+                                    <input type="text" id="maxtime" name="maxtime" value="{{.MaxTime}}" placeholder="45m, 2h, etc.">
+                                </div>
+                            </fieldset>
+                        </details>
+
+                        <details class="expandable-section nested-details">
+                            <summary>Proxies</summary>
+                            <fieldset>
+                                <div class="form-group">
+                                    <label for="proxies">Proxy List (one per line)</label>
+                                    <textarea id="proxies" name="proxies" rows="4" placeholder="http://user:pass@host:port&#10;socks5://host:port">{{.ProxiesString}}</textarea>
+                                </div>
+                            </fieldset>
+                        </details>
+
+                        <button type="submit" style="margin-top:16px">Start Scraping</button>
+                    </form>
+                </details>
             </div>
+
             <div class="content">
                 <div id="spinner" class="spinner"></div>
                 <table id="job-table">
                     <thead>
                         <tr>
-                            <th>Job ID</th>
-                            <th>Job Name</th>
-                            <th>Job Date</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th style="width:200px">Job ID</th>
+                            <th>Name</th>
+                            <th style="width:160px">Created</th>
+                            <th style="width:100px">Status</th>
+                            <th style="width:280px">Actions</th>
                         </tr>
                     </thead>
-                    <tbody hx-get="/jobs" hx-trigger="load, every 10s">
-                        <!-- Job rows will be inserted here by HTMX -->
-                    </tbody>
+                    <tbody id="job-tbody" hx-get="/jobs" hx-trigger="load, every 10s"></tbody>
                 </table>
             </div>
         </main>
     </div>
 
+<!-- Job Detail Dialog -->
+<dialog id="job-detail-dialog" class="job-detail-dialog">
+    <div class="job-detail-dialog-inner">
+        <div class="job-detail-dialog-header">
+            <span style="font-weight:600">Job Details</span>
+            <button type="button" class="secondary-button" onclick="document.getElementById('job-detail-dialog').close()">Close</button>
+        </div>
+        <div id="job-detail-body" class="job-detail-body"></div>
+    </div>
+</dialog>
+
+<!-- Live Results Dialog -->
+<dialog id="live-results-dialog">
+    <div class="live-dialog-inner">
+        <div class="live-dialog-header">
+            <div style="display:flex;align-items:center">
+                <h3 class="live-dialog-title">Live Results</h3>
+                <span id="live-dialog-meta" class="live-dialog-meta"></span>
+            </div>
+            <button type="button" class="secondary-button" onclick="closeLiveDialog()">Close</button>
+        </div>
+        <div class="live-dialog-body">
+            <div class="live-table-wrap">
+                <table class="live-results-table">
+                    <thead>
+                        <tr>
+                            <th>Business</th>
+                            <th>Address</th>
+                            <th>Phone</th>
+                            <th>Rating</th>
+                            <th>Website</th>
+                            <th>Emails</th>
+                        </tr>
+                    </thead>
+                    <tbody id="live-results-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</dialog>
+
 <script>
-function hideSponsor() {
-    const sponsorSection = document.getElementById('sponsor-section');
-    if (sponsorSection) {
-        sponsorSection.style.display = 'none';
-    }
+var livePollTimer = null;
+var livePollJobId = null;
+var livePollSince = 0;
+
+function defaultMaxTimeForIntensity(i) {
+    if (i <= 20) return '45m';
+    if (i <= 40) return '3h';
+    if (i <= 60) return '8h';
+    if (i <= 80) return '16h';
+    return '36h';
 }
+
+function intensityHint(i) {
+    if (i <= 20) return 'Quick scan — single area, moderate depth';
+    if (i <= 40) return 'Regional — ~50 grid cells for state searches';
+    if (i <= 60) return 'Thorough — ~150 grid cells, 1-2 hours';
+    if (i <= 80) return 'Deep — ~400 grid cells, several hours';
+    return 'Maximum — ~850 cells, expect long runtime';
+}
+
+function syncIntensityUI() {
+    var el = document.getElementById('intensity');
+    if (!el) return;
+    var v = parseInt(el.value, 10) || 0;
+    var lab = document.getElementById('intensity_label');
+    if (lab) lab.textContent = String(v);
+    var mt = document.getElementById('simple_maxtime');
+    if (mt) mt.value = defaultMaxTimeForIntensity(v);
+    var hint = document.getElementById('intensity_hint');
+    if (hint) hint.textContent = intensityHint(v);
+}
+
+function openLiveResults(jobId) {
+    var dialog = document.getElementById('live-results-dialog');
+    var body = document.getElementById('live-results-body');
+    var meta = document.getElementById('live-dialog-meta');
+
+    if (body) body.innerHTML = '';
+    if (meta) meta.textContent = 'Loading…';
+
+    dialog.showModal();
+    startLivePolling(jobId);
+}
+
+function closeLiveDialog() {
+    if (livePollTimer) {
+        clearInterval(livePollTimer);
+        livePollTimer = null;
+    }
+    livePollJobId = null;
+    document.getElementById('live-results-dialog').close();
+}
+
+function startLivePolling(jobId) {
+    if (livePollTimer) {
+        clearInterval(livePollTimer);
+        livePollTimer = null;
+    }
+    livePollJobId = jobId;
+    livePollSince = 0;
+
+    function tick() {
+        if (!livePollJobId) return;
+        fetch('/api/v1/jobs/' + encodeURIComponent(livePollJobId) + '/results?since=' + livePollSince + '&limit=500')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data || data.code) return;
+                renderLiveMeta(data, jobId);
+                var rows = data.results || [];
+                for (var i = 0; i < rows.length; i++) {
+                    upsertLiveRow(rows[i]);
+                    if (rows[i].updated_at > livePollSince) livePollSince = rows[i].updated_at;
+                }
+                if (data.job_status !== 'pending' && data.job_status !== 'working') {
+                    clearInterval(livePollTimer);
+                    livePollTimer = null;
+                }
+            })
+            .catch(function () {});
+    }
+    tick();
+    livePollTimer = setInterval(tick, 3000);
+}
+
+function renderLiveMeta(data, jobId) {
+    var meta = document.getElementById('live-dialog-meta');
+    if (!meta) return;
+    var name = data.job_name || jobId;
+    var total = data.total || 0;
+    var parts = [name, total + ' result' + (total === 1 ? '' : 's')];
+
+    var email = data.email || {};
+    var eligible = (email.total || 0) - (email.skipped || 0);
+    if (eligible > 0) {
+        var done = (email.done || 0) + (email.empty || 0) + (email.failed || 0);
+        var label = done + '/' + eligible + ' emails fetched';
+        if ((email.pending || 0) > 0) {
+            label += ' (' + email.pending + ' pending)';
+        }
+        parts.push(label);
+    }
+
+    var status = data.job_status || '';
+    var statusLabel;
+    switch (status) {
+        case 'working':
+            statusLabel = '● Working';
+            break;
+        case 'pending':
+            statusLabel = '○ Pending';
+            break;
+        case 'ok':
+            statusLabel = '✓ Complete';
+            break;
+        default:
+            statusLabel = status;
+    }
+    parts.push(statusLabel);
+
+    meta.textContent = parts.join(' — ');
+}
+
+function upsertLiveRow(r) {
+    var body = document.getElementById('live-results-body');
+    if (!body) return;
+    var tr = document.querySelector('tr[data-place-key="' + cssEscape(r.place_key) + '"]');
+    if (!tr) {
+        tr = document.createElement('tr');
+        tr.setAttribute('data-place-key', r.place_key);
+        body.appendChild(tr);
+    }
+    var emails = '';
+    try {
+        var arr = JSON.parse(r.emails_json || '[]');
+        if (Array.isArray(arr)) emails = arr.join(', ');
+    } catch (e) { emails = ''; }
+
+    var emailCell = '';
+    if (emails) {
+        emailCell = escapeHtml(emails);
+    } else if (r.email_status === 'pending') {
+        emailCell = '<span class="email-pending">…fetching</span>';
+    } else if (r.email_status === 'empty') {
+        emailCell = '<span class="email-empty">none</span>';
+    } else if (r.email_status === 'failed') {
+        emailCell = '<span class="email-failed">unreachable</span>';
+    } else if (r.email_status === 'skipped') {
+        emailCell = '<span class="email-empty">—</span>';
+    }
+
+    tr.innerHTML = '<td>' + escapeHtml(r.title) + '</td>' +
+        '<td>' + escapeHtml(r.address) + '</td>' +
+        '<td>' + escapeHtml(r.phone) + '</td>' +
+        '<td>' + escapeHtml(String(r.rating || '')) + '</td>' +
+        '<td>' + (r.website ? '<a href="' + escapeAttr(r.website) + '" target="_blank" rel="noopener">' + escapeHtml(r.website) + '</a>' : '') + '</td>' +
+        '<td>' + emailCell + '</td>';
+}
+
+function cssEscape(s) {
+    if (window.CSS && CSS.escape) return CSS.escape(String(s || ''));
+    return String(s || '').replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escapeAttr(s) {
+    if (!s) return '';
+    return String(s).replace(/"/g, '&quot;');
+}
+
+document.addEventListener('DOMContentLoaded', syncIntensityUI);
+
+function scrapeFormToDTO() {
+    var bt = document.getElementById('business_type');
+    if (bt && bt.value.trim()) {
+        var gLoc = document.getElementById('location');
+        var inten = document.getElementById('intensity');
+        return {
+            keywords: [bt.value.trim()],
+            lang: 'en',
+            zoom: 0,
+            lat: '',
+            lon: '',
+            fast_mode: false,
+            radius: 0,
+            depth: 0,
+            email: document.getElementById('simple_email') && document.getElementById('simple_email').checked,
+            extra_reviews: false,
+            max_time: (document.getElementById('simple_maxtime') && document.getElementById('simple_maxtime').value) || defaultMaxTimeForIntensity(parseInt(inten && inten.value, 10) || 0),
+            proxies: [],
+            area_preset: '',
+            search_region: gLoc ? gLoc.value.trim() : '',
+            grid_cell_km: 0,
+            simple_mode: true,
+            intensity: parseInt(inten && inten.value, 10) || 0
+        };
+    }
+    const keywordsRaw = document.getElementById('keywords').value;
+    const keywords = keywordsRaw.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    const gck = document.getElementById('grid_cell_km').value.trim();
+    return {
+        keywords: keywords,
+        lang: document.getElementById('lang').value.trim(),
+        zoom: parseInt(document.getElementById('zoom').value, 10) || 0,
+        lat: String(document.getElementById('latitude').value || '').trim(),
+        lon: String(document.getElementById('longitude').value || '').trim(),
+        fast_mode: document.getElementById('fastmode').checked,
+        radius: parseInt(document.getElementById('radius').value, 10) || 0,
+        depth: parseInt(document.getElementById('depth').value, 10) || 0,
+        email: document.getElementById('email').checked,
+        extra_reviews: false,
+        max_time: document.getElementById('maxtime').value.trim(),
+        proxies: document.getElementById('proxies').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean),
+        area_preset: document.getElementById('area_preset').value,
+        search_region: document.getElementById('search_region').value.trim(),
+        grid_cell_km: gck === '' ? 0 : parseFloat(gck) || 0
+    };
+}
+
+function applyFormPayload(resp) {
+    var d = resp.data || {};
+    var hint = (resp.name_hint || '').trim();
+    var nameCopy = hint ? hint + ' (copy)' : '';
+    var nameEl = document.getElementById('name');
+    if (nameEl) nameEl.value = nameCopy;
+    var simpleNameEl = document.getElementById('simple_name');
+    if (simpleNameEl) simpleNameEl.value = nameCopy;
+    document.getElementById('keywords').value = (d.keywords || []).join('\n');
+    document.getElementById('lang').value = d.lang || '';
+    document.getElementById('search_region').value = d.search_region || '';
+    var locEl = document.getElementById('location');
+    if (locEl && d.search_region) locEl.value = d.search_region;
+    document.getElementById('area_preset').value = d.area_preset || '';
+    var gck = d.grid_cell_km;
+    document.getElementById('grid_cell_km').value = (gck != null && gck !== 0) ? String(Math.round(Number(gck))) : '';
+    document.getElementById('zoom').value = d.zoom != null ? String(d.zoom) : '';
+    document.getElementById('latitude').value = d.lat || '';
+    document.getElementById('longitude').value = d.lon || '';
+    document.getElementById('fastmode').checked = !!d.fast_mode;
+    document.getElementById('radius').value = d.radius != null ? String(d.radius) : '';
+    document.getElementById('depth').value = d.depth != null ? String(d.depth) : '';
+    document.getElementById('email').checked = !!d.email;
+    document.getElementById('maxtime').value = d.max_time || '';
+    var se = document.getElementById('simple_email');
+    if (se) se.checked = !!d.email;
+    var smt = document.getElementById('simple_maxtime');
+    if (smt && d.max_time) smt.value = d.max_time;
+    document.getElementById('proxies').value = (d.proxies || []).join('\n');
+    var btEl = document.getElementById('business_type');
+    if (btEl && d.keywords && d.keywords.length) btEl.value = d.keywords[0] || '';
+    var intEl = document.getElementById('intensity');
+    if (intEl && d.intensity != null) {
+        intEl.value = String(d.intensity);
+        syncIntensityUI();
+    }
+    var err = document.getElementById('error-container');
+    if (err) err.innerHTML = '';
+}
+
+async function saveCurrentAsPreset() {
+    var nameInput = document.getElementById('preset_display_name');
+    var name = nameInput.value.trim();
+    if (!name) {
+        alert('Enter a template name.');
+        return;
+    }
+    var r;
+    var bt = document.getElementById('business_type');
+    var loc = document.getElementById('location');
+    var inten = document.getElementById('intensity');
+    var se = document.getElementById('simple_email');
+    if (bt && bt.value.trim() && loc && inten) {
+        var payloadS = {
+            preset_name: name,
+            business_type: bt.value.trim(),
+            location: loc.value.trim(),
+            intensity: parseInt(inten.value, 10) || 0,
+            email: !!(se && se.checked),
+            lang: 'en'
+        };
+        r = await fetch('/ui/preset-save-simple', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadS)
+        });
+        if (!r.ok) {
+            alert(await r.text() || 'Could not save template.');
+            return;
+        }
+        nameInput.value = '';
+        if (typeof htmx !== 'undefined') htmx.trigger(document.body, 'presetListChanged');
+        return;
+    }
+    var payload = { preset_name: name, data: scrapeFormToDTO() };
+    r = await fetch('/ui/preset-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!r.ok) {
+        alert(await r.text() || 'Could not save template.');
+        return;
+    }
+    nameInput.value = '';
+    if (typeof htmx !== 'undefined') htmx.trigger(document.body, 'presetListChanged');
+}
+
+async function showJobDetail(id) {
+    var r = await fetch('/ui/job-detail?id=' + encodeURIComponent(id));
+    if (!r.ok) {
+        alert('Could not load job details.');
+        return;
+    }
+    document.getElementById('job-detail-body').innerHTML = await r.text();
+    document.getElementById('job-detail-dialog').showModal();
+}
+
+async function duplicateJobIntoForm(id) {
+    var r = await fetch('/ui/job-form-data?id=' + encodeURIComponent(id));
+    if (!r.ok) {
+        alert('Could not load job settings.');
+        return;
+    }
+    applyFormPayload(await r.json());
+}
+
+async function applyPresetIntoForm(id) {
+    var r = await fetch('/ui/preset-form-data?id=' + encodeURIComponent(id));
+    if (!r.ok) {
+        alert('Could not load template.');
+        return;
+    }
+    applyFormPayload(await r.json());
+}
+
+// Close dialogs on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        var liveDialog = document.getElementById('live-results-dialog');
+        if (liveDialog.open) closeLiveDialog();
+    }
+});
 </script>
 </body>
 </html>

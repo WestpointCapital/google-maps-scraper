@@ -12,15 +12,44 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/gosom/google-maps-scraper/areapresets"
 )
 
 //go:embed static
 var static embed.FS
+
+// webContentRoot returns a filesystem whose root contains templates/ and css/
+// (the contents of the repo’s web/static directory). By default this comes from
+// go:embed; set SCRAPER_WEB_STATIC_DIR to an absolute path to web/static to pick up
+// HTML/CSS changes without recompiling (restart the server only).
+func webContentRoot() (fs.FS, error) {
+	d := strings.TrimSpace(os.Getenv("SCRAPER_WEB_STATIC_DIR"))
+	if d == "" {
+		return fs.Sub(static, "static")
+	}
+
+	if !filepath.IsAbs(d) {
+		return nil, fmt.Errorf("SCRAPER_WEB_STATIC_DIR must be an absolute path, got %q", d)
+	}
+
+	fi, err := os.Stat(d)
+	if err != nil {
+		return nil, fmt.Errorf("SCRAPER_WEB_STATIC_DIR: %w", err)
+	}
+
+	if !fi.IsDir() {
+		return nil, fmt.Errorf("SCRAPER_WEB_STATIC_DIR must be a directory: %s", d)
+	}
+
+	log.Printf("web UI: serving templates and /static from disk: %s", d)
+
+	return os.DirFS(d), nil
+}
 
 type Server struct {
 	tmpl map[string]*template.Template
@@ -42,7 +71,7 @@ func New(svc *Service, addr string) (*Server, error) {
 		},
 	}
 
-	staticFS, err := fs.Sub(static, "static")
+	staticFS, err := webContentRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +92,13 @@ func New(svc *Service, addr string) (*Server, error) {
 		ans.delete(w, r)
 	})
 	mux.HandleFunc("/jobs", ans.getJobs)
+	mux.HandleFunc("/ui/job-form-data", ans.uiJobFormData)
+	mux.HandleFunc("/ui/job-detail", ans.uiJobDetail)
+	mux.HandleFunc("/ui/presets-panel", ans.uiPresetsPanel)
+	mux.HandleFunc("/ui/preset-save-simple", ans.uiPresetSaveSimple)
+	mux.HandleFunc("/ui/preset-save", ans.uiPresetSave)
+	mux.HandleFunc("/ui/preset-delete", ans.uiPresetDelete)
+	mux.HandleFunc("/ui/preset-form-data", ans.uiPresetFormData)
 	mux.HandleFunc("/", ans.index)
 
 	// api routes
@@ -118,23 +154,40 @@ func New(svc *Service, addr string) (*Server, error) {
 		ans.download(w, r)
 	})
 
+	mux.HandleFunc("/api/v1/jobs/{id}/results", func(w http.ResponseWriter, r *http.Request) {
+		r = requestWithID(r)
+
+		ans.apiGetJobResults(w, r)
+	})
+
+	mux.HandleFunc("/api/v1/jobs/{id}/stats", func(w http.ResponseWriter, r *http.Request) {
+		r = requestWithID(r)
+
+		ans.apiGetJobStats(w, r)
+	})
+
 	handler := securityHeaders(mux)
 	ans.srv.Handler = handler
 
-	tmplsKeys := []string{
-		"static/templates/index.html",
-		"static/templates/job_rows.html",
-		"static/templates/job_row.html",
-		"static/templates/redoc.html",
+	tmplPaths := []struct {
+		rel    string // path under web/static (templates/… or …)
+		mapKey string // key used in s.tmpl (historical "static/…" prefix)
+	}{
+		{"templates/index.html", "static/templates/index.html"},
+		{"templates/job_rows.html", "static/templates/job_rows.html"},
+		{"templates/job_row.html", "static/templates/job_row.html"},
+		{"templates/job_detail.html", "static/templates/job_detail.html"},
+		{"templates/preset_panel.html", "static/templates/preset_panel.html"},
+		{"templates/redoc.html", "static/templates/redoc.html"},
 	}
 
-	for _, key := range tmplsKeys {
-		tmp, err := template.ParseFS(static, key)
+	for _, p := range tmplPaths {
+		tmp, err := template.ParseFS(staticFS, p.rel)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse template %s: %w", p.rel, err)
 		}
 
-		ans.tmpl[key] = tmp
+		ans.tmpl[p.mapKey] = tmp
 	}
 
 	return &ans, nil
@@ -165,18 +218,22 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 type formData struct {
-	Name     string
-	MaxTime  string
-	Keywords []string
-	Language string
-	Zoom     int
-	FastMode bool
-	Radius   int
-	Lat      string
-	Lon      string
-	Depth    int
-	Email    bool
-	Proxies  []string
+	Name         string
+	MaxTime      string
+	Keywords     []string
+	Language     string
+	Zoom         int
+	FastMode     bool
+	Radius       int
+	Lat          string
+	Lon          string
+	Depth        int
+	Email        bool
+	Proxies      []string
+	SearchRegion string
+	AreaPreset   string
+	GridCellKm   float64
+	USStateAreas []areapresets.SelectOption
 }
 
 type ctxKey string
@@ -228,17 +285,21 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := formData{
-		Name:     "",
-		MaxTime:  "10m",
-		Keywords: []string{},
-		Language: "en",
-		Zoom:     15,
-		FastMode: false,
-		Radius:   10000,
-		Lat:      "0",
-		Lon:      "0",
-		Depth:    10,
-		Email:    false,
+		Name:         "",
+		MaxTime:      "10m",
+		Keywords:     []string{},
+		Language:     "en",
+		Zoom:         14,
+		FastMode:     false,
+		Radius:       10000,
+		Lat:          "",
+		Lon:          "",
+		Depth:        10,
+		Email:        false,
+		SearchRegion: "",
+		AreaPreset:   "",
+		GridCellKm:   45,
+		USStateAreas: areapresets.USSelectOptions(),
 	}
 
 	_ = tmpl.Execute(w, data)
@@ -258,91 +319,35 @@ func (s *Server) scrape(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newJob := Job{
-		ID:     uuid.New().String(),
-		Name:   r.Form.Get("name"),
-		Date:   time.Now().UTC(),
-		Status: StatusPending,
-		Data:   JobData{},
+	var parsed *ParsedScrapeForm
+
+	if SimpleFormSubmitted(r) {
+		parsed, err = ParseSimpleScrapeForm(r)
+	} else {
+		parsed, err = ParseScrapeForm(r)
 	}
 
-	maxTimeStr := r.Form.Get("maxtime")
-
-	maxTime, err := time.ParseDuration(maxTimeStr)
 	if err != nil {
-		http.Error(w, "invalid max time", http.StatusUnprocessableEntity)
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 
 		return
 	}
 
-	if maxTime < time.Minute*3 {
+	if parsed.MaxTime < time.Minute*3 {
 		http.Error(w, "max time must be more than 3m", http.StatusUnprocessableEntity)
 
 		return
 	}
 
-	newJob.Data.MaxTime = maxTime
-
-	keywordsStr, ok := r.Form["keywords"]
-	if !ok {
-		http.Error(w, "missing keywords", http.StatusUnprocessableEntity)
-
-		return
+	newJob := Job{
+		ID:     uuid.New().String(),
+		Name:   parsed.JobName,
+		Date:   time.Now().UTC(),
+		Status: StatusPending,
+		Data:   parsed.Data,
 	}
 
-	keywords := strings.Split(keywordsStr[0], "\n")
-	for _, k := range keywords {
-		k = strings.TrimSpace(k)
-		if k == "" {
-			continue
-		}
-
-		newJob.Data.Keywords = append(newJob.Data.Keywords, k)
-	}
-
-	newJob.Data.Lang = r.Form.Get("lang")
-
-	newJob.Data.Zoom, err = strconv.Atoi(r.Form.Get("zoom"))
-	if err != nil {
-		http.Error(w, "invalid zoom", http.StatusUnprocessableEntity)
-
-		return
-	}
-
-	if r.Form.Get("fastmode") == "on" {
-		newJob.Data.FastMode = true
-	}
-
-	newJob.Data.Radius, err = strconv.Atoi(r.Form.Get("radius"))
-	if err != nil {
-		http.Error(w, "invalid radius", http.StatusUnprocessableEntity)
-
-		return
-	}
-
-	newJob.Data.Lat = r.Form.Get("latitude")
-	newJob.Data.Lon = r.Form.Get("longitude")
-
-	newJob.Data.Depth, err = strconv.Atoi(r.Form.Get("depth"))
-	if err != nil {
-		http.Error(w, "invalid depth", http.StatusUnprocessableEntity)
-
-		return
-	}
-
-	newJob.Data.Email = r.Form.Get("email") == "on"
-
-	proxies := strings.Split(r.Form.Get("proxies"), "\n")
-	if len(proxies) > 0 {
-		for _, p := range proxies {
-			p = strings.TrimSpace(p)
-			if p == "" {
-				continue
-			}
-
-			newJob.Data.Proxies = append(newJob.Data.Proxies, p)
-		}
-	}
+	newJob.Data.MaxTime = parsed.MaxTime
 
 	err = newJob.Validate()
 	if err != nil {
