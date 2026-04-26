@@ -2,7 +2,7 @@
     <h3 class="job-detail-title">{{.Job.Name}}</h3>
     <dl class="job-detail-dl">
         <dt>Job ID</dt><dd><code>{{.Job.ID}}</code></dd>
-        <dt>Status</dt><dd><span class="status-indicator status-{{.Job.Status}}">{{.Job.Status}}</span></dd>
+        <dt>Status</dt><dd><span class="status-indicator status-{{.StatusClass}}">{{.StatusLabel}}</span></dd>
         <dt>Created</dt><dd>{{.Job.Date.Format "2006-01-02 15:04:05 UTC"}}</dd>
         <dt>Max time</dt><dd>{{.Job.Data.MaxTime}}</dd>
         <dt>Language</dt><dd>{{.Job.Data.Lang}}</dd>

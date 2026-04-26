@@ -4,16 +4,34 @@
     <td>{{.Name}}</td>
     <td style="color:var(--text-secondary)">{{.Date}}</td>
     <td>
-        <span class="status-indicator status-{{.Status}}">{{.Status}}</span>
+        <span class="status-indicator status-{{.StatusClass}}">{{.StatusLabel}}</span>
     </td>
     <td class="job-actions-cell">
         <div class="job-row-actions">
         {{ if or (eq .Status "working") (eq .Status "pending") }}
             <button type="button" class="live-btn" onclick="openLiveResults('{{.ID}}')">Live</button>
         {{ end }}
+        {{ if eq .Status "working" }}
+            <button type="button" class="stop-btn" title="Stop and keep partial results"
+                    hx-post="/job/stop?id={{.ID}}"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    hx-confirm="Stop this job now? Results collected so far will be kept.">Stop</button>
+            {{ if .IsPaused }}
+            <button type="button" class="secondary-button" title="Resume scraping"
+                    hx-post="/job/resume?id={{.ID}}"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML">Resume</button>
+            {{ else }}
+            <button type="button" class="secondary-button" title="Pause before processing the next result"
+                    hx-post="/job/pause?id={{.ID}}"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML">Pause</button>
+            {{ end }}
+        {{ end }}
         <button type="button" class="secondary-button" onclick="showJobDetail('{{.ID}}')">Details</button>
         <button type="button" class="secondary-button" onclick="duplicateJobIntoForm('{{.ID}}')">Duplicate</button>
-        {{ if eq .Status "ok" }}
+        {{ if or (eq .Status "ok") (eq .Status "working") }}
             <a href="/download?id={{.ID}}" download class="download-button">Download CSV</a>
         {{ end }}
         <button hx-delete="/delete?id={{.ID}}" 

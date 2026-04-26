@@ -1,3 +1,5 @@
+//go:build turso
+
 package sqlite
 
 import (
