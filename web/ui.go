@@ -195,11 +195,15 @@ func (s *Server) uiJobDetail(w http.ResponseWriter, r *http.Request) {
 
 	exportPath := "/api/v1/jobs/" + id + "/results?since=0&limit=50000"
 
+	item := s.jobListItemForJob(&job)
+
 	vm := jobDetailVM{
-		Job:             job,
-		KeywordsDisplay: strings.Join(job.Data.Keywords, "\n"),
-		ProxiesDisplay:  strings.Join(job.Data.Proxies, "\n"),
-		ResultCount:     nResults,
+		Job:              job,
+		StatusClass:      item.StatusClass(),
+		StatusLabel:      item.StatusLabel(),
+		KeywordsDisplay:  strings.Join(job.Data.Keywords, "\n"),
+		ProxiesDisplay:   strings.Join(job.Data.Proxies, "\n"),
+		ResultCount:      nResults,
 		ExportResultsURL: exportPath,
 	}
 
@@ -215,6 +219,8 @@ func (s *Server) uiJobDetail(w http.ResponseWriter, r *http.Request) {
 // jobDetailVM is passed to job_detail.html.
 type jobDetailVM struct {
 	Job              Job
+	StatusClass      string
+	StatusLabel      string
 	KeywordsDisplay  string
 	ProxiesDisplay   string
 	ResultCount      int64

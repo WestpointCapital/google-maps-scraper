@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gosom/google-maps-scraper/gmaps"
 )
@@ -13,6 +15,9 @@ import (
 type Service struct {
 	store      Datastore
 	dataFolder string
+
+	jobPauseMu sync.RWMutex
+	jobPaused  map[string]struct{}
 }
 
 func NewService(store Datastore, dataFolder string) *Service {
@@ -126,4 +131,50 @@ func (s *Service) GetCSV(_ context.Context, id string) (string, error) {
 	}
 
 	return datapath, nil
+}
+
+// SetJobPaused marks a job as paused in memory (not persisted). Only applies
+// while a job is running; cleared when the run ends or on resume.
+func (s *Service) SetJobPaused(jobID string, paused bool) {
+	s.jobPauseMu.Lock()
+	defer s.jobPauseMu.Unlock()
+
+	if s.jobPaused == nil {
+		s.jobPaused = make(map[string]struct{})
+	}
+
+	if paused {
+		s.jobPaused[jobID] = struct{}{}
+
+		return
+	}
+
+	delete(s.jobPaused, jobID)
+}
+
+// IsJobPaused reports whether a pause is in effect for the job.
+func (s *Service) IsJobPaused(jobID string) bool {
+	s.jobPauseMu.RLock()
+	defer s.jobPauseMu.RUnlock()
+
+	_, ok := s.jobPaused[jobID]
+
+	return ok
+}
+
+// WaitIfPaused blocks until the job is resumed, ctx is done, or the job is no
+// longer marked paused. Used by the live CSV writer between result batches.
+func (s *Service) WaitIfPaused(ctx context.Context, jobID string) error {
+	tick := time.NewTicker(200 * time.Millisecond)
+	defer tick.Stop()
+
+	for s.IsJobPaused(jobID) {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-tick.C:
+		}
+	}
+
+	return nil
 }

@@ -50,50 +50,63 @@ func NewCSVLiveWriter(w *csv.Writer, sink JobResultSink, enricher *EmailEnricher
 // Run implements scrapemate.ResultWriter. It is the SOLE consumer of the
 // Results channel: split that across multiple writers and you lose rows.
 func (c *CSVLiveWriter) Run(ctx context.Context, in <-chan scrapemate.Result) error {
-	for result := range in {
-		elements, err := csvElementsFromData(result.Data)
-		if err != nil {
-			return err
+	for {
+		if s, ok := c.sink.(*Service); ok {
+			if err := s.WaitIfPaused(ctx, c.jobID); err != nil {
+				return err
+			}
 		}
 
-		if len(elements) == 0 {
-			continue
-		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case result, ok := <-in:
+			if !ok {
+				return c.w.Error()
+			}
 
-		c.once.Do(func() {
-			_ = c.w.Write(elements[0].CsvHeaders())
-		})
-
-		for _, element := range elements {
-			if err := c.w.Write(element.CsvRow()); err != nil {
+			elements, err := csvElementsFromData(result.Data)
+			if err != nil {
 				return err
 			}
 
-			entry, ok := element.(*gmaps.Entry)
-			if !ok || c.sink == nil {
+			if len(elements) == 0 {
 				continue
 			}
 
-			initial := c.initialEmailStatus(entry)
+			c.once.Do(func() {
+				_ = c.w.Write(elements[0].CsvHeaders())
+			})
 
-			if err := c.sink.UpsertJobResult(ctx, c.jobID, entry, initial); err != nil {
-				return err
+			for _, element := range elements {
+				if err := c.w.Write(element.CsvRow()); err != nil {
+					return err
+				}
+
+				entry, entryOK := element.(*gmaps.Entry)
+				if !entryOK || c.sink == nil {
+					continue
+				}
+
+				initial := c.initialEmailStatus(entry)
+
+				if err := c.sink.UpsertJobResult(ctx, c.jobID, entry, initial); err != nil {
+					return err
+				}
+
+				// Hand off to the async enricher only when:
+				//   - the user actually asked for emails,
+				//   - we have a usable website,
+				//   - the row is fresh (no emails already).
+				if c.wantEmails && c.enricher != nil && initial == EmailStatusPending {
+					placeKey := PlaceDedupeKey(entry)
+					_ = c.enricher.Submit(c.jobID, placeKey, entry)
+				}
 			}
 
-			// Hand off to the async enricher only when:
-			//   - the user actually asked for emails,
-			//   - we have a usable website,
-			//   - the row is fresh (no emails already).
-			if c.wantEmails && c.enricher != nil && initial == EmailStatusPending {
-				placeKey := PlaceDedupeKey(entry)
-				_ = c.enricher.Submit(c.jobID, placeKey, entry)
-			}
+			c.w.Flush()
 		}
-
-		c.w.Flush()
 	}
-
-	return c.w.Error()
 }
 
 // initialEmailStatus decides what email_status to write on first INSERT:

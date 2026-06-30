@@ -3,7 +3,6 @@ package webrunner
 import (
 	"context"
 	"encoding/csv"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,12 +11,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gosom/google-maps-scraper/areapresets"
 	"github.com/gosom/google-maps-scraper/deduper"
 	"github.com/gosom/google-maps-scraper/exiter"
-	"github.com/gosom/google-maps-scraper/gmaps"
 	"github.com/gosom/google-maps-scraper/grid"
 	"github.com/gosom/google-maps-scraper/runner"
 	"github.com/gosom/google-maps-scraper/tlmt"
@@ -28,34 +27,13 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// decodeJobResultEntry rebuilds a *gmaps.Entry from the raw_json column
-// captured at scrape time, then merges in the latest emails column (which
-// the async enricher updates after the row is first persisted).
-func decodeJobResultEntry(r web.JobResult) (*gmaps.Entry, bool) {
-	if r.RawJSON == "" {
-		return nil, false
-	}
-
-	entry := &gmaps.Entry{}
-	if err := json.Unmarshal([]byte(r.RawJSON), entry); err != nil {
-		return nil, false
-	}
-
-	if r.EmailsJSON != "" {
-		var emails []string
-		if err := json.Unmarshal([]byte(r.EmailsJSON), &emails); err == nil && len(emails) > 0 {
-			entry.Emails = emails
-		}
-	}
-
-	return entry, true
-}
-
 type webrunner struct {
 	srv      *web.Server
 	svc      *web.Service
 	cfg      *runner.Config
 	enricher *web.EmailEnricher
+	runMu    sync.Mutex
+	cancels  map[string]context.CancelFunc
 }
 
 func New(cfg *runner.Config) (runner.Runner, error) {
@@ -76,21 +54,23 @@ func New(cfg *runner.Config) (runner.Runner, error) {
 
 	svc := web.NewService(store, cfg.DataFolder)
 
-	srv, err := web.New(svc, cfg.Addr)
+	w := &webrunner{
+		svc:     svc,
+		cfg:     cfg,
+		cancels: make(map[string]context.CancelFunc),
+	}
+
+	srv, err := web.New(svc, cfg.Addr, w)
 	if err != nil {
 		return nil, err
 	}
 
+	w.srv = srv
+
 	enricher := web.NewEmailEnricher(svc, emailEnricherWorkers())
+	w.enricher = enricher
 
-	ans := webrunner{
-		srv:      srv,
-		svc:      svc,
-		cfg:      cfg,
-		enricher: enricher,
-	}
-
-	return &ans, nil
+	return w, nil
 }
 
 func (w *webrunner) Run(ctx context.Context) error {
@@ -251,6 +231,7 @@ func (w *webrunner) scrapeJob(ctx context.Context, job *web.Job) error {
 	}
 
 	defer closeOutfile()
+	defer w.svc.SetJobPaused(job.ID, false)
 
 	mate, err := w.setupMate(ctx, outfile, job)
 	if err != nil {
@@ -369,7 +350,12 @@ func (w *webrunner) scrapeJob(ctx context.Context, job *web.Job) error {
 		log.Printf("running job %s with %d seed jobs and %d allowed seconds", job.ID, len(seedJobs), allowedSeconds)
 
 		mateCtx, cancel := context.WithTimeout(ctx, time.Duration(allowedSeconds)*time.Second)
-		defer cancel()
+
+		w.registerRunCancel(job.ID, cancel)
+		defer func() {
+			w.unregisterRunCancel(job.ID)
+			cancel()
+		}()
 
 		exitMonitor.SetCancelFunc(cancel)
 
@@ -377,8 +363,6 @@ func (w *webrunner) scrapeJob(ctx context.Context, job *web.Job) error {
 
 		err = mate.Start(mateCtx, seedJobs...)
 		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
-			cancel()
-
 			err2 := w.svc.Update(ctx, job)
 			if err2 != nil {
 				log.Printf("failed to update job status: %v", err2)
@@ -386,8 +370,6 @@ func (w *webrunner) scrapeJob(ctx context.Context, job *web.Job) error {
 
 			return err
 		}
-
-		cancel()
 	}
 
 	mate.Close()
@@ -407,7 +389,7 @@ func (w *webrunner) scrapeJob(ctx context.Context, job *web.Job) error {
 	// emails the async enricher produced after the main scrape finished.
 	closeOutfile()
 
-	if err := w.regenerateCSV(ctx, job.ID, outpath); err != nil {
+	if err := w.svc.MaterializeJobCSV(ctx, job.ID); err != nil {
 		log.Printf("[job %s] CSV regen failed: %v", job.ID, err)
 	}
 
@@ -439,56 +421,6 @@ func emailDrainBudget(maxTime time.Duration) time.Duration {
 	default:
 		return half
 	}
-}
-
-// regenerateCSV rebuilds the on-disk CSV from job_results so emails added
-// by the async enricher (after the main scrape ended) are included in the
-// download. If there are zero rows we leave the existing file untouched.
-func (w *webrunner) regenerateCSV(ctx context.Context, jobID, outpath string) error {
-	rows, err := w.svc.ListJobResults(ctx, jobID, 0)
-	if err != nil {
-		return err
-	}
-
-	if len(rows) == 0 {
-		return nil
-	}
-
-	f, err := os.Create(outpath)
-	if err != nil {
-		return err
-	}
-
-	defer func() { _ = f.Close() }()
-
-	cw := csv.NewWriter(f)
-
-	// Decode raw_json back into a *gmaps.Entry so we reuse the same CSV
-	// layout (headers + columns) the live writer used during the scrape.
-	headerWritten := false
-
-	for i := range rows {
-		entry, ok := decodeJobResultEntry(rows[i])
-		if !ok {
-			continue
-		}
-
-		if !headerWritten {
-			if err := cw.Write(entry.CsvHeaders()); err != nil {
-				return err
-			}
-
-			headerWritten = true
-		}
-
-		if err := cw.Write(entry.CsvRow()); err != nil {
-			return err
-		}
-	}
-
-	cw.Flush()
-
-	return cw.Error()
 }
 
 func (w *webrunner) setupMate(_ context.Context, writer io.Writer, job *web.Job) (*scrapemateapp.ScrapemateApp, error) {

@@ -350,6 +350,21 @@ button {
     border-color: var(--border-medium);
 }
 
+.stop-btn {
+    background: var(--error-bg);
+    color: var(--error);
+    border: 1px solid var(--error);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.stop-btn:hover {
+    filter: brightness(0.95);
+}
+
 /* Status indicators */
 .status-indicator {
     display: inline-flex;
@@ -368,9 +383,21 @@ button {
     color: var(--success);
 }
 
-.status-pending, .status-working {
+.status-pending, .status-working, .status-paused {
     background: var(--warning-bg);
     color: var(--warning);
+}
+
+.status-paused {
+    color: #b8860b;
+}
+
+.status-paused::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: #b8860b;
+    border-radius: 50%;
 }
 
 .status-pending::before, .status-working::before {

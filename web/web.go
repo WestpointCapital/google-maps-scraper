@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"encoding/json"
@@ -52,15 +53,18 @@ func webContentRoot() (fs.FS, error) {
 }
 
 type Server struct {
-	tmpl map[string]*template.Template
-	srv  *http.Server
-	svc  *Service
+	tmpl   map[string]*template.Template
+	srv    *http.Server
+	svc    *Service
+	jobCtl JobController
 }
 
-func New(svc *Service, addr string) (*Server, error) {
+// New runs the UI server. If jobCtl is non-nil, Stop/Pause/Resume are enabled.
+func New(svc *Service, addr string, jobCtl JobController) (*Server, error) {
 	ans := Server{
-		svc:  svc,
-		tmpl: make(map[string]*template.Template),
+		svc:    svc,
+		jobCtl: jobCtl,
+		tmpl:   make(map[string]*template.Template),
 		srv: &http.Server{
 			Addr:              addr,
 			ReadHeaderTimeout: 10 * time.Second,
@@ -91,6 +95,9 @@ func New(svc *Service, addr string) (*Server, error) {
 
 		ans.delete(w, r)
 	})
+	mux.HandleFunc("/job/stop", ans.jobStop)
+	mux.HandleFunc("/job/pause", ans.jobPause)
+	mux.HandleFunc("/job/resume", ans.jobResume)
 	mux.HandleFunc("/jobs", ans.getJobs)
 	mux.HandleFunc("/ui/job-form-data", ans.uiJobFormData)
 	mux.HandleFunc("/ui/job-detail", ans.uiJobDetail)
@@ -164,6 +171,57 @@ func New(svc *Service, addr string) (*Server, error) {
 		r = requestWithID(r)
 
 		ans.apiGetJobStats(w, r)
+	})
+
+	mux.HandleFunc("/api/v1/jobs/{id}/stop", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			ans := apiError{
+				Code:    http.StatusMethodNotAllowed,
+				Message: "Method not allowed",
+			}
+
+			renderJSON(w, http.StatusMethodNotAllowed, ans)
+
+			return
+		}
+
+		r = requestWithID(r)
+
+		ans.apiJobStop(w, r)
+	})
+
+	mux.HandleFunc("/api/v1/jobs/{id}/pause", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			ans := apiError{
+				Code:    http.StatusMethodNotAllowed,
+				Message: "Method not allowed",
+			}
+
+			renderJSON(w, http.StatusMethodNotAllowed, ans)
+
+			return
+		}
+
+		r = requestWithID(r)
+
+		ans.apiJobPause(w, r)
+	})
+
+	mux.HandleFunc("/api/v1/jobs/{id}/resume", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			ans := apiError{
+				Code:    http.StatusMethodNotAllowed,
+				Message: "Method not allowed",
+			}
+
+			renderJSON(w, http.StatusMethodNotAllowed, ans)
+
+			return
+		}
+
+		r = requestWithID(r)
+
+		ans.apiJobResume(w, r)
 	})
 
 	handler := securityHeaders(mux)
@@ -370,7 +428,7 @@ func (s *Server) scrape(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = tmpl.Execute(w, newJob)
+	_ = tmpl.Execute(w, s.jobListItemForJob(&newJob))
 }
 
 func (s *Server) getJobs(w http.ResponseWriter, r *http.Request) {
@@ -393,7 +451,13 @@ func (s *Server) getJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = tmpl.Execute(w, jobs)
+	list := make([]JobListItem, 0, len(jobs))
+	for i := range jobs {
+		j := jobs[i]
+		list = append(list, s.jobListItemForJob(&j))
+	}
+
+	_ = tmpl.Execute(w, list)
 }
 
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
@@ -412,26 +476,53 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := s.svc.GetCSV(ctx, id.String())
+	jobID := id.String()
+
+	// Prefer a CSV built from job_results so async email enrichment (stored in
+	// emails_json) is included. This avoids racing the live scrape writer, which
+	// only mirrors Maps data into the file until the job finishes.
+	var buf bytes.Buffer
+
+	wroteFromDB, err := s.svc.WriteJobCSVFromDB(ctx, jobID, &buf)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	fileName := jobID + ".csv"
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	w.Header().Set("Content-Type", "text/csv")
+
+	if wroteFromDB {
+		if _, err := io.Copy(w, bytes.NewReader(buf.Bytes())); err != nil {
+			http.Error(w, "Failed to send file", http.StatusInternalServerError)
+
+			return
+		}
+
+		return
+	}
+
+	filePath, err := s.svc.GetCSV(ctx, jobID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
+
 		return
 	}
 
 	file, err := os.Open(filePath)
 	if err != nil {
 		http.Error(w, "Failed to open file", http.StatusInternalServerError)
+
 		return
 	}
+
 	defer file.Close()
 
-	fileName := filepath.Base(filePath)
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
-	w.Header().Set("Content-Type", "text/csv")
-
-	_, err = io.Copy(w, file)
-	if err != nil {
+	if _, err := io.Copy(w, file); err != nil {
 		http.Error(w, "Failed to send file", http.StatusInternalServerError)
+
 		return
 	}
 }
